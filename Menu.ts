@@ -7,7 +7,7 @@ export function main() {
 
     while (true) {
 
-        console.log(Colors.bg.black, Colors.fg.yellow, 
+        console.log(Colors.bg.green, Colors.fg.yellow, 
                     "*****************************************************");
         console.log("                                                     ");
         console.log("                BANCO DO BRAZIL COM Z                ");
