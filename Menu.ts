@@ -1,6 +1,6 @@
-import leia from "readline-sync";
 import { Colors } from './src/util/Colors';
 import { Conta } from "./src/model/Conta";
+import { Input } from "./src/util/Input";
 
 export function main() {
 
@@ -33,7 +33,7 @@ export function main() {
 
     while (true) {
 
-        console.log(Colors.bg.green, Colors.fg.yellow, 
+        console.log(Colors.bg.black, Colors.fg.yellow, 
                     "*****************************************************");
         console.log("                                                     ");
         console.log("                BANCO DO BRAZIL COM Z                ");
@@ -55,7 +55,7 @@ export function main() {
         Colors.reset);
 
         console.log("Entre com a opção desejada: ");
-        opcao = leia.questionInt("");
+        opcao = Input.questionInt("");
 
         if (opcao === 0) {
             console.log(Colors.fg.greenstrong, "\nBanco do Brazil com Z - O seu Futuro começa aqui!");
@@ -67,7 +67,7 @@ export function main() {
         switch (opcao) {
             case 1:
                 console.log(Colors.fg.whitestrong, "\n\nCriar Conta\n\n", Colors.reset);
-                
+
                 keyPress()
                 break;
             case 2:
@@ -126,7 +126,7 @@ function sobre(): void {
 /* Função de pausa entre as opções do menu */
 function keyPress(): void {
     console.log(Colors.reset,"\nPressione enter para continuar...");
-    leia.prompt();
+    Input.prompt();
 }
 
 main();
