@@ -1,6 +1,6 @@
 import { Colors } from "../util/Colors";
 
-export class Conta{
+export abstract class Conta{
 
     // Atributos da Classe
     private _numero: number;
@@ -64,12 +64,12 @@ export class Conta{
     public sacar(valor: number): boolean {
 
         if(valor <= 0){
-            console.log(Colors.fg.red, "O valor deve ser positivo", Colors.reset);
+            console.log(Colors.fg.red, "\nO valor deve ser positivo", Colors.reset);
             return false;
         }
 
         if(valor > this._saldo){
-            console.log(Colors.fg.red, "Saldo Insuficiente!", Colors.reset);
+            console.log(Colors.fg.red, "\nSaldo Insuficiente!", Colors.reset);
             return false;
         }
 
