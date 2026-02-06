@@ -21,62 +21,78 @@ export class Input {
 
 	/**
 	 * 🔍 Detecta qual encoding o console do Windows está usando
-	 *
-	 * O que é encoding?
-	 * - É a forma como o computador transforma letras em números
-	 * - Diferentes encodings usam números diferentes para "ã", "ç", "é"
-	 *
-	 * Como funciona:
-	 * 1. Executa o comando 'chcp' no Windows (mostra qual encoding está ativo)
-	 * 2. Lê o número do Code Page:
-	 *    - 65001 = UTF-8 (encoding moderno, funciona bem)
-	 *    - 850 = CP850 (padrão no Brasil, causa problemas)
-	 *    - 1252 = CP1252 (Windows Latin-1)
-	 * 3. Salva essa informação para usar depois
-	 *
-	 * ⚠️ Esta detecção acontece apenas UMA vez (na primeira chamada de qualquer método)
 	 */
 	private static detectarEncoding(): void {
-		// Se já detectou antes, não precisa fazer novamente
 		if (this.configurado) return
 
-		// Só precisa detectar no Windows (Linux/Mac já usam UTF-8 automaticamente)
 		if (process.platform === 'win32') {
 			try {
-				// Executa o comando 'chcp' no terminal do Windows
 				const { execSync } = require('child_process')
 				const resultado = execSync('chcp', {
 					encoding: 'utf8',
 				}).toString()
 
-				// Extrai o número do code page
-				// Exemplo: de "Página de código ativa: 850" pega só o "850"
 				const match = resultado.match(/\d+/)
 
 				if (match) {
 					const codePage = match[0]
-
-					// Define o encoding baseado no code page encontrado
 					this.encodingConsole =
 						codePage === '65001'
-							? 'utf8' // UTF-8 (já funciona bem)
+							? 'utf8'
 							: codePage === '850'
-								? 'cp850' // CP850 (precisa conversão)
+								? 'cp850'
 								: codePage === '1252'
-									? 'cp1252' // Windows Latin-1
-									: `cp${codePage}` // Outros code pages
+									? 'cp1252'
+									: `cp${codePage}`
 				}
 			} catch (error) {
-				// Se algo der errado, assume CP850 (mais comum no Brasil)
 				this.encodingConsole = 'cp850'
 			}
 		} else {
-			// Linux e Mac sempre usam UTF-8 (não precisa conversão)
 			this.encodingConsole = 'utf8'
 		}
 
-		// Marca como já configurado (não vai detectar novamente)
 		this.configurado = true
+	}
+
+	/**
+	 * 🔧 Converte uma string UTF-8 para o encoding do console
+	 */
+	private static converterParaConsole(texto: string): string {
+		const buffer = iconv.encode(texto, this.encodingConsole)
+		return buffer.toString('binary')
+	}
+
+	/**
+	 * 🔧 Converte bytes do console para UTF-8
+	 */
+	private static converterDoConsole(textoRaw: string): string {
+		const buffer = Buffer.from(textoRaw, 'binary')
+		return iconv.decode(buffer, this.encodingConsole)
+	}
+
+	/**
+	 * 🔧 Prepara as configurações para uso com readline-sync
+	 */
+	private static prepararConfig(config?: any): any {
+		this.detectarEncoding()
+
+		let configFinal: any = {
+			encoding: 'binary',
+			...config,
+		}
+
+		// Converte defaultInput se existir
+		if (config?.defaultInput !== undefined) {
+			configFinal.defaultInput = this.converterParaConsole(String(config.defaultInput))
+		}
+
+		// Converte limitMessage se existir
+		if (config?.limitMessage) {
+			configFinal.limitMessage = this.converterParaConsole(config.limitMessage)
+		}
+
+		return configFinal
 	}
 
 	/**
@@ -90,52 +106,19 @@ export class Input {
 	 * 📖 EXEMPLOS:
 	 * const nome = Input.question('Digite seu nome: ')
 	 * const cidade = Input.question('Digite sua cidade: ', { defaultInput: 'São Paulo' })
-	 *
-	 * 🔧 COMO FUNCIONA INTERNAMENTE:
-	 * 1. Detecta qual encoding o console está usando
-	 * 2. SEMPRE lê os bytes brutos (sem interpretar)
-	 * 3. Converte esses bytes do encoding correto → UTF-8
-	 * 4. Retorna a string com acentos corretos!
 	 */
 	static question(pergunta: string, config?: any): string {
-		// Detecta o encoding do console (só na primeira vez)
-		this.detectarEncoding()
-
 		const readlinesync = require('readline-sync')
 
-		// Converte a PERGUNTA de UTF-8 → encoding do console
-		const bufferPergunta = iconv.encode(pergunta, this.encodingConsole)
-		const perguntaConvertida = bufferPergunta.toString('binary')
+		const perguntaConvertida = this.converterParaConsole(pergunta)
+		const configFinal = this.prepararConfig(config)
 
-		// SEMPRE usa conversão de encoding, mesmo em UTF-8
-		// Isso garante compatibilidade total com acentos
-		// Configura para ler bytes brutos (sem interpretar como texto)
-		let configFinal = {
-			encoding: 'binary', // 'binary' = lê bytes sem conversão
-			...config, // Adiciona outras configurações do usuário
-		}
-
-		// Se tem valor padrão (defaultInput), precisa converter também
-		if (config?.defaultInput) {
-			// Converte o valor padrão de UTF-8 → encoding do console
-			const bufferDefault = iconv.encode(
-				config.defaultInput,
-				this.encodingConsole,
-			)
-			configFinal.defaultInput = bufferDefault.toString('binary')
-		}
-
-		// Lê a resposta como 'binary' (bytes brutos)
-		// Usa a pergunta CONVERTIDA
 		const respostaRaw = readlinesync.question(perguntaConvertida, configFinal)
-
-		// Converte os bytes do encoding do console → UTF-8 (para usar no JavaScript)
-		const buffer = Buffer.from(respostaRaw, 'binary')
-		return iconv.decode(buffer, this.encodingConsole)
+		return this.converterDoConsole(respostaRaw)
 	}
 
 	/**
-	 * 🔢 Lê um número INTEIRO com validação automática
+	 * 🔢 Lê um número INTEIRO com validação automática (USA O MÉTODO NATIVO!)
 	 *
 	 * 💡 QUANDO USAR:
 	 * - Para idade: 25, 30, 18
@@ -145,45 +128,34 @@ export class Input {
 	 *
 	 * 📖 EXEMPLOS:
 	 * const idade = Input.questionInt('Digite sua idade: ')
-	 * const opcao = Input.questionInt('Escolha (1-3): ', { limitMessage: 'Opção inválida!' })
+	 * const opcao = Input.questionInt('Escolha (1-3): ', { limit: [1, 2, 3] })
 	 * const quantidade = Input.questionInt('Quantidade: ', { defaultInput: 1 })
 	 *
 	 * ✅ VANTAGENS:
-	 * - Só aceita números inteiros (rejeita letras automaticamente)
-	 * - Rejeita números decimais (1.5 não é aceito)
-	 * - Pode ter valor padrão (usuário só aperta ENTER)
-	 * - Sempre mostra mensagem de erro quando digitar valor inválido
+	 * - Usa a validação NATIVA do readline-sync
+	 * - Suporta limit, limitMessage, defaultInput
+	 * - Rejeita automaticamente valores inválidos
+	 * - Mensagem de erro padrão em português
 	 */
 	static questionInt(pergunta: string, config?: any): number {
-		const limitMessage = config?.limitMessage || 'Digite um número inteiro!'
-		const defaultInput = config?.defaultInput
+		const readlinesync = require('readline-sync')
 
-		while (true) {
-			// Usa o question() que já funciona com acentos
-			const respostaStr = this.question(pergunta, {
-				defaultInput: defaultInput !== undefined ? String(defaultInput) : undefined
-			})
-
-			// Se está vazio e tem defaultInput, retorna o padrão
-			if (respostaStr.trim() === '' && defaultInput !== undefined) {
-				return defaultInput
-			}
-
-			// Tenta converter para número inteiro
-			const numero = parseInt(respostaStr.trim(), 10)
-
-			// Valida se é um número inteiro válido
-			if (!isNaN(numero) && numero.toString() === respostaStr.trim()) {
-				return numero
-			}
-
-			// Mostra mensagem de erro
-			console.log(limitMessage)
+		const perguntaConvertida = this.converterParaConsole(pergunta)
+		
+		// Define mensagem padrão em português se não foi fornecida
+		const configComMensagem = {
+			limitMessage: 'Digite um numero inteiro!',
+			...config
 		}
+		
+		const configFinal = this.prepararConfig(configComMensagem)
+
+		// USA O MÉTODO NATIVO questionInt() do readline-sync!
+		return readlinesync.questionInt(perguntaConvertida, configFinal)
 	}
 
 	/**
-	 * 💰 Lê um número DECIMAL com validação automática
+	 * 💰 Lê um número DECIMAL com validação automática (USA O MÉTODO NATIVO!)
 	 *
 	 * 💡 QUANDO USAR:
 	 * - Para preço: 19.90, 100.50
@@ -194,42 +166,30 @@ export class Input {
 	 *
 	 * 📖 EXEMPLOS:
 	 * const preco = Input.questionFloat('Digite o preço: ')
-	 * const altura = Input.questionFloat('Digite sua altura (m): ')
+	 * const altura = Input.questionFloat('Digite sua altura (m): ', { limit: [1.0, 2.5] })
 	 * const nota = Input.questionFloat('Digite a nota: ', { defaultInput: 0.0 })
 	 *
 	 * ✅ VANTAGENS:
-	 * - Aceita números decimais (8.5, 10.75)
-	 * - Aceita números inteiros também (10 vira 10.0)
-	 * - Rejeita letras automaticamente
-	 * - Pode ter valor padrão
-	 * - Sempre mostra mensagem de erro quando digitar valor inválido
+	 * - Usa a validação NATIVA do readline-sync
+	 * - Suporta limit, limitMessage, defaultInput
+	 * - Aceita tanto inteiros quanto decimais
+	 * - Mensagem de erro padrão em português
 	 */
 	static questionFloat(pergunta: string, config?: any): number {
-		const limitMessage = config?.limitMessage || 'Digite um número decimal.'
-		const defaultInput = config?.defaultInput
+		const readlinesync = require('readline-sync')
 
-		while (true) {
-			// Usa o question() que já funciona com acentos
-			const respostaStr = this.question(pergunta, {
-				defaultInput: defaultInput !== undefined ? String(defaultInput) : undefined
-			})
-
-			// Se está vazio e tem defaultInput, retorna o padrão
-			if (respostaStr.trim() === '' && defaultInput !== undefined) {
-				return defaultInput
-			}
-
-			// Tenta converter para número decimal
-			const numero = parseFloat(respostaStr.trim())
-
-			// Valida se é um número válido
-			if (!isNaN(numero) && isFinite(numero)) {
-				return numero
-			}
-
-			// Mostra mensagem de erro
-			console.log(limitMessage)
+		const perguntaConvertida = this.converterParaConsole(pergunta)
+		
+		// Define mensagem padrão em português se não foi fornecida
+		const configComMensagem = {
+			limitMessage: 'Digite um numero decimal!',
+			...config
 		}
+		
+		const configFinal = this.prepararConfig(configComMensagem)
+
+		// USA O MÉTODO NATIVO questionFloat() do readline-sync!
+		return readlinesync.questionFloat(perguntaConvertida, configFinal)
 	}
 
 	/**
@@ -253,34 +213,14 @@ export class Input {
 	 * } else {
 	 *   console.log('Você cancelou') // escolha === -1
 	 * }
-	 *
-	 * ✅ COMO FUNCIONA:
-	 * - Mostra as opções numeradas automaticamente [1] [2] [3]
-	 * - Usuário digita o número e aperta ENTER
-	 * - Retorna o ÍNDICE da escolha (começa em 0)
-	 * - Retorna -1 se o usuário cancelar (CANCEL ou ESC)
 	 */
-	static keyInSelect(
-		opcoes: string[],
-		pergunta: string,
-		config?: any,
-	): number {
-		// Detecta o encoding do console (só na primeira vez)
+	static keyInSelect(opcoes: string[], pergunta: string, config?: any): number {
 		this.detectarEncoding()
-
 		const readlinesync = require('readline-sync')
 
-		// Converte a PERGUNTA de UTF-8 → encoding do console
-		const bufferPergunta = iconv.encode(pergunta, this.encodingConsole)
-		const perguntaConvertida = bufferPergunta.toString('binary')
+		const perguntaConvertida = this.converterParaConsole(pergunta)
+		const opcoesConvertidas = opcoes.map((opcao) => this.converterParaConsole(opcao))
 
-		// Converte cada OPÇÃO de UTF-8 → encoding do console
-		const opcoesConvertidas = opcoes.map((opcao) => {
-			const bufferOpcao = iconv.encode(opcao, this.encodingConsole)
-			return bufferOpcao.toString('binary')
-		})
-
-		// Usa a pergunta e opções convertidas
 		return readlinesync.keyInSelect(opcoesConvertidas, perguntaConvertida, config)
 	}
 
@@ -299,23 +239,12 @@ export class Input {
 	 * } else {
 	 *   console.log('Usuário negou!')
 	 * }
-	 *
-	 * ✅ COMO FUNCIONA:
-	 * - Usuário deve digitar Y (Yes/Sim) ou N (No/Não)
-	 * - Não aceita outras teclas (é "estrito")
-	 * - Retorna true para Y, false para N
 	 */
 	static keyInYNStrict(pergunta: string, config?: any): boolean {
-		// Detecta o encoding do console (só na primeira vez)
 		this.detectarEncoding()
-
 		const readlinesync = require('readline-sync')
 
-		// Converte a PERGUNTA de UTF-8 → encoding do console
-		const bufferPergunta = iconv.encode(pergunta, this.encodingConsole)
-		const perguntaConvertida = bufferPergunta.toString('binary')
-
-		// Usa a pergunta convertida
+		const perguntaConvertida = this.converterParaConsole(pergunta)
 		return readlinesync.keyInYNStrict(perguntaConvertida, config)
 	}
 
@@ -326,22 +255,9 @@ export class Input {
 	 * - Para pausar o programa: "Pressione ENTER para continuar..."
 	 * - Para o usuário ler mensagens antes de limpar a tela
 	 * - Para criar "breakpoints" no fluxo do programa
-	 *
-	 * 📖 EXEMPLO:
-	 * console.log('Cadastro realizado com sucesso!')
-	 * console.log('Pressione ENTER para voltar ao menu...')
-	 * Input.prompt()
-	 * // Aqui o programa pausa até o usuário apertar ENTER
-	 * console.clear() // Limpa a tela
-	 *
-	 * ✅ COMO FUNCIONA:
-	 * - O programa para e aguarda
-	 * - Usuário aperta ENTER
-	 * - O programa continua
 	 */
 	static prompt(): void {
 		const readlinesync = require('readline-sync')
-
 		readlinesync.prompt()
 	}
 
@@ -351,19 +267,9 @@ export class Input {
 	 * 💡 QUANDO USAR:
 	 * - Para DEBUGAR problemas de acentuação
 	 * - Para verificar se está usando UTF-8 ou CP850
-	 * - Para entender por que os acentos não aparecem
-	 *
-	 * 📖 EXEMPLO:
-	 * console.log('Encoding atual:', Input.getEncoding())
-	 * // Possíveis respostas:
-	 * // - "utf8" (não precisa conversão, acentos funcionam)
-	 * // - "cp850" (precisa conversão, comum no Windows Brasil)
-	 * // - "cp1252" (precisa conversão, Windows Latin-1)
 	 */
 	static getEncoding(): string {
-		// Detecta o encoding se ainda não foi detectado
 		this.detectarEncoding()
-
 		return this.encodingConsole
 	}
 }
