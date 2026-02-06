@@ -2,7 +2,7 @@ import { Conta } from './Conta';
 
 export class ContaPoupanca extends Conta {
     
-	// Atributos específicos de Conta Corrente
+	// Atributos específicos de Conta Poupança
 	private _aniversario: number
 
 	// Construtor com a chamada para a Super Classe
