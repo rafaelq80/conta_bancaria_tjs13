@@ -15,7 +15,7 @@ export class ContaController implements ContaRepository{
         if(buscaConta !== null)
             buscaConta.visualizar();
         else
-            console.log(Colors.fg.red, "\nConta não Encontrada!", Colors.reset);
+            console.log(Colors.fg.red, `\nA Conta número ${numero} não foi encontrada!`, Colors.reset);
 
     }
     
@@ -37,9 +37,9 @@ export class ContaController implements ContaRepository{
         if(buscaConta !== null){
             this.listaContas[this.listaContas.indexOf(buscaConta)] = conta;
             console.log(Colors.fg.green, 
-                `\nA Conta número ${conta.numero} foi Atualizada com Sucesso!`, Colors.reset);
+                `\nA Conta número ${conta.numero} foi atualizada com sucesso!`, Colors.reset);
         }else
-            console.log(Colors.fg.red, "\nConta não Encontrada!", Colors.reset);
+            console.log(Colors.fg.red, `\nA Conta número ${conta.numero} não foi encontrada!`, Colors.reset);
     }
 
     deletar(numero: number): void {
@@ -48,9 +48,9 @@ export class ContaController implements ContaRepository{
         if(buscaConta !== null){
             this.listaContas.splice(this.listaContas.indexOf(buscaConta), 1);
             console.log(Colors.fg.green, 
-                `\nA Conta número ${numero} foi Deletada com Sucesso!`, Colors.reset);
+                `\nA Conta número ${numero} foi deletada com sucesso!`, Colors.reset);
         }else
-            console.log(Colors.fg.red, "\nConta não Encontrada!", Colors.reset);
+            console.log(Colors.fg.red, `\nA Conta número ${numero} não foi encontrada!`, Colors.reset);
     }
 
     // Métodos Bancários

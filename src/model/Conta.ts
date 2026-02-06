@@ -1,4 +1,5 @@
 import { Colors } from "../util/Colors";
+import { formatarMoeda } from "../util/Currency";
 
 export abstract class Conta{
 
@@ -107,6 +108,6 @@ export abstract class Conta{
         console.log(`Número da agência: ${this._agencia}`);
         console.log(`Nome do titular: ${this._titular}`);
         console.log(`Tipo da conta: ${tipo}`);
-        console.log(`Saldo da conta: R$ ${this._saldo.toFixed(2)}`);
+        console.log(`Saldo da conta: R$ ${formatarMoeda(this._saldo)}`);
     }
 }
