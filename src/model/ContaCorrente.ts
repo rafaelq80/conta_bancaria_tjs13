@@ -56,6 +56,6 @@ export class ContaCorrente extends Conta {
 	// Método visualizar sobrescrito (Polimorfismo)
 	public visualizar(): void {
 		super.visualizar()
-		console.log(`Limite da conta: R$ ${formatarMoeda(this._limite)}`)
+		console.log(`Limite da conta: ${formatarMoeda(this._limite)}`)
 	}
 }

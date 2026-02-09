@@ -35,6 +35,7 @@ export function main() {
         console.log("            6 - Sacar                                ");
         console.log("            7 - Depositar                            ");
         console.log("            8 - Transferir valores entre Contas      ");
+        console.log("            9 - Buscar Conta por Nome do Titular     ");
         console.log("            0 - Sair                                 ");
         console.log("                                                     ");
         console.log("*****************************************************");
@@ -90,15 +91,28 @@ export function main() {
             case 6:
                 console.log(Colors.fg.whitestrong, "\n\nSaque\n\n", Colors.reset);
 
+                sacar();
+
                 keyPress()
                 break;
             case 7:
                 console.log(Colors.fg.whitestrong, "\n\nDepósito\n\n", Colors.reset);
 
+                depositar();
+
                 keyPress()
                 break;
             case 8:
                 console.log(Colors.fg.whitestrong, "\n\nTransferência entre Contas\n\n", Colors.reset);
+
+                transferir();
+
+                keyPress()
+                break;
+            case 9:
+                console.log(Colors.fg.whitestrong, "\n\nProcurar Conta por Nome do Titular\n\n", Colors.reset);
+
+                procurarPorTitular();
 
                 keyPress()
                 break;
@@ -310,6 +324,77 @@ function deletarContaPorNumero(): void{
         console.log(Colors.fg.red, `A conta número ${numero} não foi encontrada!`, Colors.reset);
     }
 
+}
+
+function sacar(): void{
+
+    console.log("Digite o número da conta: ");
+    const numero = Input.questionInt("");
+    
+    const conta = contas.buscarNoArray(numero);
+
+    if(conta !== null){
+        console.log("Digite o valor do saque: ");
+        const valor = Input.questionFloat("");
+
+        contas.sacar(numero, valor);
+    }else{
+        console.log(Colors.fg.red, `A conta número ${numero} não foi encontrada!`, Colors.reset);
+    }
+}
+
+function depositar(): void{
+
+    console.log("Digite o número da conta: ");
+    const numero = Input.questionInt("");
+    
+    const conta = contas.buscarNoArray(numero);
+
+    if(conta !== null){
+        console.log("Digite o valor do depósito: ");
+        const valor = Input.questionFloat("");
+
+        contas.depositar(numero, valor);
+    }else{
+        console.log(Colors.fg.red, `A conta número ${numero} não foi encontrada!`, Colors.reset);
+    }
+}
+
+function transferir(): void{
+
+    console.log("Digite o número da Conta de Origem: ");
+    const numeroOrigem = Input.questionInt("");
+    
+    console.log("Digite o número da Conta de Destino: ");
+    const numeroDestino = Input.questionInt("");
+
+    const contaOrigem = contas.buscarNoArray(numeroOrigem);
+    const contaDestino = contas.buscarNoArray(numeroDestino);
+
+    if(contaOrigem === null){
+
+        console.log(Colors.fg.red, `A Conta de Origem número ${numeroOrigem} não foi encontrada!`, Colors.reset);
+
+    }else if(contaDestino === null)    {
+
+        console.log(Colors.fg.red, `A Conta de Destino número ${numeroDestino} não foi encontrada!`, Colors.reset);
+
+    }else{
+        console.log("Digite o valor da Transferência: ");
+        const valor = Input.questionFloat("");
+
+        contas.transferir(numeroOrigem, numeroDestino, valor);
+    }
+}
+
+function procurarPorTitular(): void{
+
+    // Solicita o nome do titular
+    console.log("Digite o Nome do Titular: ");
+    const titular = Input.question("");
+
+    // Localiza a conta a partir do nome do titular
+    contas.procurarPorTitular(titular);
 }
 
 /**
